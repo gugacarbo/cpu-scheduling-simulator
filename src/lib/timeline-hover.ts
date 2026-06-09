@@ -136,12 +136,6 @@ function addSliceCoverage(
   }
 }
 
-function addTimeRangeCoverage(start: number, end: number, tableTimes: Set<number>): void {
-  for (let t = start; t < end; t++) {
-    tableTimes.add(t)
-  }
-}
-
 /** Table hover: time column + contiguous burst at that instant (not full job/task history). */
 function addTableScopedHighlight(
   time: number,
@@ -181,6 +175,28 @@ function addTableScopedHighlight(
   return null
 }
 
+function addJobHighlight(
+  jobId: string,
+  executionLog: SimulationResult['executionLog'],
+  sliceIndices: Set<number>,
+  tableTimes: Set<number>,
+  jobIds: Set<string>,
+): [number, number] | null {
+  jobIds.add(jobId)
+  let rangeStart = Number.POSITIVE_INFINITY
+  let rangeEnd = Number.NEGATIVE_INFINITY
+  for (let i = 0; i < executionLog.length; i++) {
+    if (executionLog[i].jobId !== jobId) continue
+    addSliceCoverage(executionLog, i, sliceIndices, tableTimes, jobIds)
+    rangeStart = Math.min(rangeStart, executionLog[i].start)
+    rangeEnd = Math.max(rangeEnd, executionLog[i].end)
+  }
+  if (rangeStart < rangeEnd) {
+    return [rangeStart, rangeEnd]
+  }
+  return null
+}
+
 /** Single resolver: every hover source maps to the same highlight dimensions. */
 export function resolveTimelineHighlight(
   hover: TimelineHoverState,
@@ -212,28 +228,13 @@ export function resolveTimelineHighlight(
       break
     }
     case 'chart': {
-      const group = getContiguousJobSliceGroup(executionLog, hover.sliceIndex)
-      if (!group) return null
-      timeRange = [group.start, group.end]
-      addTimeRangeCoverage(group.start, group.end, tableTimes)
-      for (let i = group.startIndex; i <= group.endIndex; i++) {
-        addSliceCoverage(executionLog, i, sliceIndices, tableTimes, jobIds)
-      }
+      const slice = executionLog[hover.sliceIndex]
+      if (!slice) return null
+      timeRange = addJobHighlight(slice.jobId, executionLog, sliceIndices, tableTimes, jobIds)
       break
     }
     case 'job': {
-      jobIds.add(hover.jobId)
-      let rangeStart = Number.POSITIVE_INFINITY
-      let rangeEnd = Number.NEGATIVE_INFINITY
-      for (let i = 0; i < executionLog.length; i++) {
-        if (executionLog[i].jobId !== hover.jobId) continue
-        addSliceCoverage(executionLog, i, sliceIndices, tableTimes, jobIds)
-        rangeStart = Math.min(rangeStart, executionLog[i].start)
-        rangeEnd = Math.max(rangeEnd, executionLog[i].end)
-      }
-      if (rangeStart < rangeEnd) {
-        timeRange = [rangeStart, rangeEnd]
-      }
+      timeRange = addJobHighlight(hover.jobId, executionLog, sliceIndices, tableTimes, jobIds)
       break
     }
     case 'task': {
