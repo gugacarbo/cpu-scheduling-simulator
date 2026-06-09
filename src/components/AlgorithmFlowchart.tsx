@@ -1,104 +1,56 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { buildMermaidDiagramForScheduler } from '@/lib/flowchart-definitions'
+import { ReactFlow, type NodeTypes } from '@xyflow/react'
+import { useMemo } from 'react'
+import { flowchartNodeTypes } from '@/components/flowchart/FlowchartNodes'
+import { buildFlowElements } from '@/lib/flowchart-definitions'
 import type { SchedulerName } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-function useDocumentTheme(): 'light' | 'dark' {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-      ? 'dark'
-      : 'light',
-  )
-
-  useEffect(() => {
-    const root = document.documentElement
-    const observer = new MutationObserver(() => {
-      setTheme(root.classList.contains('dark') ? 'dark' : 'light')
-    })
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
-
-  return theme
-}
-
-function configureMermaid(mermaid: typeof import('mermaid').default, theme: 'light' | 'dark') {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: theme === 'dark' ? 'dark' : 'base',
-    securityLevel: 'strict',
-    fontFamily: '"Geist Variable", sans-serif',
-    flowchart: {
-      htmlLabels: true,
-      curve: 'basis',
-      wrappingWidth: 220,
-      padding: 12,
-    },
-  })
-}
+import '@xyflow/react/dist/style.css'
 
 export function AlgorithmFlowchart({ scheduler }: { scheduler: SchedulerName }) {
-  const theme = useDocumentTheme()
-  const containerRef = useRef<HTMLDivElement>(null)
-  const renderId = useId().replace(/:/g, '')
-  const [renderError, setRenderError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    let cancelled = false
-
-    const render = async () => {
-      setRenderError(null)
-
-      const mermaid = (await import('mermaid')).default
-      configureMermaid(mermaid, theme)
-
-      const diagram = buildMermaidDiagramForScheduler(scheduler, theme)
-      const graphId = `flowchart-${renderId}-${scheduler}`
-
-      try {
-        const { svg } = await mermaid.render(graphId, diagram)
-        if (!cancelled) {
-          container.innerHTML = svg
-        }
-      } catch (error) {
-        if (!cancelled) {
-          container.innerHTML = ''
-          setRenderError(error instanceof Error ? error.message : 'Erro ao renderizar fluxograma')
-        }
-      }
-    }
-
-    void render()
-
-    return () => {
-      cancelled = true
-    }
-  }, [scheduler, theme, renderId])
+  const { nodes, edges, height, width } = useMemo(
+    () => buildFlowElements(scheduler),
+    [scheduler],
+  )
 
   return (
     <div
-      className="rounded-md border border-border/60 bg-muted/30 p-3"
+      className="rounded-md border border-border/60 bg-muted/30 p-2"
       role="img"
       aria-label={`Fluxograma do algoritmo ${scheduler}`}
     >
-      <p className="mb-2 text-center text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      <p className="mb-1 text-center text-[9px] font-medium tracking-wide text-muted-foreground uppercase">
         Fluxo de escalonamento
       </p>
       <div
-        ref={containerRef}
         className={cn(
-          'algorithm-flowchart flex justify-center overflow-x-auto',
-          '[&_svg]:h-auto [&_svg]:max-w-full',
-          '[&_.edgeLabel]:text-[10px] [&_.edgeLabel]:leading-snug',
-          '[&_.nodeLabel]:text-[11px] [&_.nodeLabel]:leading-snug',
+          'algorithm-flowchart mx-auto overflow-hidden rounded-sm',
+          '[&_.react-flow__background]:hidden',
+          '[&_.react-flow__panel]:hidden',
+          '[&_.react-flow__attribution]:hidden',
+          '[&_.react-flow__renderer]:bg-transparent',
+          '[&_.react-flow__edge-path]:stroke-muted-foreground/70',
         )}
-      />
-      {renderError ? (
-        <p className="mt-2 text-center text-[11px] text-destructive">{renderError}</p>
-      ) : null}
+        style={{ width, height }}
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={flowchartNodeTypes as NodeTypes}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          panOnDrag={false}
+          panOnScroll={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          preventScrolling={false}
+          fitView
+          fitViewOptions={{ padding: 0.08, minZoom: 1, maxZoom: 1 }}
+          proOptions={{ hideAttribution: true }}
+        />
+      </div>
     </div>
   )
 }

@@ -188,6 +188,11 @@ export function ConfigPanel({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogDraftText, setDialogDraftText] = useState('')
+  const dialogDraftRef = useRef(dialogDraftText)
+  const dialogOpenRef = useRef(dialogOpen)
+  dialogDraftRef.current = dialogDraftText
+  dialogOpenRef.current = dialogOpen
   const [dialogView, setDialogView] = useState<'form' | 'json'>('form')
   const [showSimulateError, setShowSimulateError] = useState(false)
   const [flowchartOpen, setFlowchartOpen] = useState(false)
@@ -195,6 +200,10 @@ export function ConfigPanel({
   const validation = useMemo(
     () => (jsonText.trim() ? validateSimulationConfigJson(jsonText) : null),
     [jsonText],
+  )
+  const dialogValidation = useMemo(
+    () => (dialogDraftText.trim() ? validateSimulationConfigJson(dialogDraftText) : null),
+    [dialogDraftText],
   )
 
   const effectiveScheduler =
@@ -224,17 +233,49 @@ export function ConfigPanel({
     if (!autoSimulateConfig || dialogOpen) return
 
     const timer = window.setTimeout(() => {
+      if (dialogOpenRef.current) return
       onSimulate(autoSimulateConfig)
     }, AUTO_SIMULATE_DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
   }, [autoSimulateConfig, onSimulate, dialogOpen])
 
+  const commitDialogDraft = useCallback(() => {
+    const draft = dialogDraftRef.current
+    onJsonChange(draft)
+    const nextValidation = draft.trim() ? validateSimulationConfigJson(draft) : null
+    if (nextValidation?.success) {
+      onSchedulerChange(nextValidation.data.scheduler_name)
+    }
+  }, [onJsonChange, onSchedulerChange])
+
+  const openDialog = useCallback(() => {
+    setDialogDraftText(jsonText)
+    setDialogOpen(true)
+  }, [jsonText])
+
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setDialogDraftText(jsonText)
+        setDialogOpen(true)
+        return
+      }
+      setDialogView('form')
+      setDialogOpen(false)
+      commitDialogDraft()
+    },
+    [jsonText, commitDialogDraft],
+  )
+
   const handleFile = useCallback(
-    (file: File) => {
+    (file: File, target: 'committed' | 'draft' = 'committed') => {
       const reader = new FileReader()
       reader.onload = () => {
-        if (typeof reader.result === 'string') {
+        if (typeof reader.result !== 'string') return
+        if (target === 'draft') {
+          setDialogDraftText(reader.result)
+        } else {
           onJsonChange(reader.result)
         }
       }
@@ -247,8 +288,12 @@ export function ConfigPanel({
     const preset = EXAMPLE_PRESETS[name]
     const response = await fetch(preset.path)
     const text = await response.text()
-    onJsonChange(text)
-    onSchedulerChange(preset.scheduler)
+    if (dialogOpen) {
+      setDialogDraftText(text)
+    } else {
+      onJsonChange(text)
+      onSchedulerChange(preset.scheduler)
+    }
     setShowSimulateError(false)
   }
 
@@ -276,7 +321,7 @@ export function ConfigPanel({
             variant="outline"
             size="sm"
             className="min-w-0 flex-1"
-            onClick={() => setDialogOpen(true)}
+            onClick={openDialog}
           >
             <FileJson className="mr-1.5 h-3.5 w-3.5 shrink-0" />
             Editar Tasks
@@ -355,25 +400,25 @@ export function ConfigPanel({
           </Select>
         </div>
 
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {algorithmDescription.body}{' '}
-          <button
-            type="button"
-            className="font-medium text-primary underline-offset-2 hover:underline"
-            aria-expanded={flowchartOpen}
-            onClick={() => setFlowchartOpen((open) => !open)}
-          >
-            {flowchartOpen ? 'Mostrar menos' : 'Mostrar mais'}
-          </button>
-        </p>
+        <button
+          type="button"
+          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+          aria-expanded={flowchartOpen}
+          onClick={() => setFlowchartOpen((open) => !open)}
+        >
+          {flowchartOpen ? 'Ocultar' : 'Detalhes'}
+        </button>
 
         <Accordion
-          value={flowchartOpen ? ['flowchart'] : []}
-          onValueChange={(value) => setFlowchartOpen(value.includes('flowchart'))}
+          value={flowchartOpen ? ['details'] : []}
+          onValueChange={(value) => setFlowchartOpen(value.includes('details'))}
           className="border-0"
         >
-          <AccordionItem value="flowchart" className="border-0">
-            <AccordionContent className="pt-1 pb-0">
+          <AccordionItem value="details" className="border-0">
+            <AccordionContent className="space-y-3 pt-1 pb-0">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {algorithmDescription.body}
+              </p>
               <AlgorithmFlowchart key={effectiveScheduler} scheduler={effectiveScheduler} />
             </AccordionContent>
           </AccordionItem>
@@ -424,13 +469,7 @@ export function ConfigPanel({
         </CardFooter>
       ) : null}
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) setDialogView('form')
-        }}
-      >
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="flex h-[520px] max-h-[calc(100svh-2rem)] flex-col gap-3 overflow-hidden sm:max-w-2xl">
           <DialogHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pr-8">
             <DialogTitle>Configurar simulação</DialogTitle>
@@ -461,10 +500,10 @@ export function ConfigPanel({
             {dialogView === 'form' ? (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <JsonGraphicalEditor
-                  jsonText={jsonText}
+                  jsonText={dialogDraftText}
                   schedulerOverride={schedulerOverride}
                   onJsonChange={(text) => {
-                    onJsonChange(text)
+                    setDialogDraftText(text)
                     setShowSimulateError(false)
                   }}
                 />
@@ -476,9 +515,9 @@ export function ConfigPanel({
                 }`}
               >
                 <Textarea
-                  value={jsonText}
+                  value={dialogDraftText}
                   onChange={(event) => {
-                    onJsonChange(event.target.value)
+                    setDialogDraftText(event.target.value)
                     setShowSimulateError(false)
                   }}
                   onDragOver={(event) => {
@@ -490,7 +529,7 @@ export function ConfigPanel({
                     event.preventDefault()
                     setDragOver(false)
                     const file = event.dataTransfer.files[0]
-                    if (file) handleFile(file)
+                    if (file) handleFile(file, 'draft')
                   }}
                   placeholder='{ "simulation_time": 14, "scheduler_name": "EDF", "tasks": [...] }'
                   className="min-h-0 flex-1 resize-none overflow-y-auto border-0 font-mono text-xs shadow-none focus-visible:ring-0"
@@ -533,14 +572,14 @@ export function ConfigPanel({
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0]
-                if (file) handleFile(file)
+                if (file) handleFile(file, 'draft')
               }}
             />
           </div>
 
-          {validation && !validation.success && (
+          {dialogValidation && !dialogValidation.success && (
             <div className="max-h-24 shrink-0 overflow-y-auto">
-              <JsonValidationAlert errors={validation.errors} />
+              <JsonValidationAlert errors={dialogValidation.errors} />
             </div>
           )}
         </DialogContent>

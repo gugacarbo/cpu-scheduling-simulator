@@ -1,6 +1,8 @@
+import type { Edge, Node } from '@xyflow/react'
+import { MarkerType } from '@xyflow/react'
 import type { SchedulerName } from '@/lib/types'
 
-type FlowNodeKind = 'start' | 'end' | 'process' | 'decision'
+export type FlowNodeKind = 'start' | 'end' | 'process' | 'decision'
 
 export interface FlowStep {
   label: string
@@ -10,227 +12,179 @@ export interface FlowStep {
 
 export const FLOWCHARTS: Record<SchedulerName, FlowStep[]> = {
   RR: [
-    { label: 'Início da simulação (t = 0)', kind: 'start' },
+    { label: 'Início (t=0)', kind: 'start' },
     {
-      label: 'Jobs chegaram em t?',
+      label: 'Novos jobs?',
       kind: 'decision',
-      note: 'Sim → adiciona à fila de prontos (FIFO)',
+      note: 'Adiciona à fila FIFO',
     },
     {
-      label: 'CPU está livre?',
+      label: 'CPU livre?',
       kind: 'decision',
-      note: 'Sim → despacha a primeira tarefa da fila',
+      note: 'Despacha 1º da fila',
     },
-    { label: 'Executa por quantum (ou até o job terminar)', kind: 'process' },
+    { label: 'Executa quantum', kind: 'process' },
     {
-      label: 'Tempo de computação restante = 0?',
+      label: 'Job terminou?',
       kind: 'decision',
-      note: 'Sim → job concluído; Não → job vai para o fim da fila',
+      note: 'Não → fim da fila',
     },
     {
-      label: 't < tempo de simulação ou há trabalho pendente?',
+      label: 'Continua?',
       kind: 'decision',
-      note: 'Sim → volta ao processamento; Não → encerra',
+      note: 'Sim → loop; Não → encerra',
     },
-    { label: 'Fim — calcula métricas (TAT, WT, etc.)', kind: 'end' },
+    { label: 'Fim — métricas', kind: 'end' },
   ],
   PRR: [
-    { label: 'Início da simulação (t = 0)', kind: 'start' },
+    { label: 'Início (t=0)', kind: 'start' },
     {
-      label: 'Jobs chegaram em t?',
+      label: 'Novos jobs?',
       kind: 'decision',
-      note: 'Sim → adiciona à fila; preempta se a nova tarefa tem maior prioridade (menor tempo de computação)',
+      note: 'Enfileira; preempta se maior prioridade',
     },
     {
-      label: 'CPU está livre?',
+      label: 'CPU livre?',
       kind: 'decision',
-      note: 'Sim → despacha o job de maior prioridade na fila',
+      note: 'Despacha maior prioridade',
     },
-    { label: 'Executa por quantum (ou até o job terminar)', kind: 'process' },
+    { label: 'Executa quantum', kind: 'process' },
     {
-      label: 'Tempo de computação restante = 0?',
+      label: 'Job terminou?',
       kind: 'decision',
-      note: 'Sim → job concluído; Não → job retorna à fila respeitando prioridade',
+      note: 'Não → volta à fila por prioridade',
     },
-    {
-      label: 't < tempo de simulação ou há trabalho pendente?',
-      kind: 'decision',
-      note: 'Sim → continua; Não → encerra',
-    },
-    { label: 'Fim — calcula métricas (TAT, WT, etc.)', kind: 'end' },
+    { label: 'Continua?', kind: 'decision', note: 'Sim → loop' },
+    { label: 'Fim — métricas', kind: 'end' },
   ],
   RR_PRIORITY: [
-    { label: 'Início da simulação (t = 0)', kind: 'start' },
+    { label: 'Início (t=0)', kind: 'start' },
     {
-      label: 'Jobs chegaram em t?',
+      label: 'Novos jobs?',
       kind: 'decision',
-      note: 'Sim → adiciona à fila; preempta se a nova tarefa tem maior prioridade (menor tempo de computação)',
+      note: 'Enfileira; preempta se maior prioridade',
     },
     {
-      label: 'CPU está livre?',
+      label: 'CPU livre?',
       kind: 'decision',
-      note: 'Sim → despacha o job de maior prioridade na fila',
+      note: 'Despacha maior prioridade',
     },
-    { label: 'Executa por quantum (ou até o job terminar)', kind: 'process' },
+    { label: 'Executa quantum', kind: 'process' },
     {
-      label: 'Tempo de computação restante = 0?',
+      label: 'Job terminou?',
       kind: 'decision',
-      note: 'Sim → job concluído; Não → job retorna à fila respeitando prioridade',
+      note: 'Não → volta à fila por prioridade',
     },
-    {
-      label: 't < tempo de simulação ou há trabalho pendente?',
-      kind: 'decision',
-      note: 'Sim → continua; Não → encerra',
-    },
-    { label: 'Fim — calcula métricas (TAT, WT, etc.)', kind: 'end' },
+    { label: 'Continua?', kind: 'decision', note: 'Sim → loop' },
+    { label: 'Fim — métricas', kind: 'end' },
   ],
   RM: [
-    { label: 'Início da simulação (t = 0)', kind: 'start' },
+    { label: 'Início (t=0)', kind: 'start' },
     {
-      label: 'Jobs periódicos chegaram em t?',
+      label: 'Jobs periódicos?',
       kind: 'decision',
-      note: 'Sim → adiciona à fila; preempta se o período do novo job é menor (prioridade maior)',
+      note: 'Preempta se período menor',
     },
     {
-      label: 'CPU está livre?',
+      label: 'CPU livre?',
       kind: 'decision',
-      note: 'Sim → despacha o job com menor período (maior taxa)',
+      note: 'Despacha menor período',
     },
-    { label: 'Executa até o job terminar (sem quantum)', kind: 'process' },
+    { label: 'Executa até terminar', kind: 'process' },
     {
       label: 'Job concluído?',
       kind: 'decision',
-      note: 'Sim → libera CPU; aguarda próxima liberação periódica',
+      note: 'Aguarda próxima liberação',
     },
-    {
-      label: 't < tempo de simulação ou há trabalho pendente?',
-      kind: 'decision',
-      note: 'Sim → continua; Não → encerra',
-    },
-    {
-      label: 'Fim — verifica Liu & Layland e calcula métricas',
-      kind: 'end',
-      note: 'U ≤ n(2^(1/n) − 1) é condição suficiente de escalonabilidade',
-    },
+    { label: 'Continua?', kind: 'decision' },
+    { label: 'Fim — Liu & Layland', kind: 'end' },
   ],
   EDF: [
-    { label: 'Início da simulação (t = 0)', kind: 'start' },
+    { label: 'Início (t=0)', kind: 'start' },
     {
-      label: 'Jobs chegaram em t?',
+      label: 'Novos jobs?',
       kind: 'decision',
-      note: 'Sim → adiciona à fila; preempta se o novo job tem prazo absoluto mais cedo',
+      note: 'Preempta se deadline mais cedo',
     },
     {
-      label: 'CPU está livre?',
+      label: 'CPU livre?',
       kind: 'decision',
-      note: 'Sim → despacha o job com menor prazo absoluto (deadline)',
+      note: 'Despacha menor deadline',
     },
-    { label: 'Executa até o job terminar (sem quantum)', kind: 'process' },
+    { label: 'Executa até terminar', kind: 'process' },
     {
       label: 'Job concluído?',
       kind: 'decision',
-      note: 'Sim → libera CPU; verifica se cumpriu o prazo',
+      note: 'Verifica cumprimento do prazo',
     },
-    {
-      label: 't < tempo de simulação ou há trabalho pendente?',
-      kind: 'decision',
-      note: 'Sim → continua; Não → encerra',
-    },
-    {
-      label: 'Fim — verifica U ≤ 1 e calcula métricas',
-      kind: 'end',
-      note: 'EDF é ótimo em uniprocessador quando U ≤ 1',
-    },
+    { label: 'Continua?', kind: 'decision' },
+    { label: 'Fim — U≤1', kind: 'end' },
   ],
 }
 
-function escapeMermaid(text: string): string {
-  return text
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '#quot;')
-    .replace(/</g, '#lt;')
-    .replace(/>/g, '#gt;')
+const NODE_WIDTH = 196
+const CANVAS_WIDTH = 260
+const CENTER_X = (CANVAS_WIDTH - NODE_WIDTH) / 2
+const ARROW_GAP = 18
+
+const NODE_HEIGHT: Record<FlowNodeKind, number> = {
+  start: 30,
+  end: 30,
+  process: 34,
+  decision: 52,
 }
 
-function nodeLabel(step: FlowStep): string {
-  if (step.note && step.kind === 'end') {
-    return `${escapeMermaid(step.label)}<br/><span style="font-size:10px;opacity:0.75">${escapeMermaid(step.note)}</span>`
-  }
-  return escapeMermaid(step.label)
+const NOTE_HEIGHT = 14
+
+function stepBlockHeight(step: FlowStep): number {
+  return NODE_HEIGHT[step.kind] + (step.note ? NOTE_HEIGHT : 0) + ARROW_GAP
 }
 
-function classDefs(theme: 'light' | 'dark'): string[] {
-  if (theme === 'dark') {
-    return [
-      'classDef startEnd fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:2px',
-      'classDef decision fill:#422006,stroke:#f59e0b,color:#fde68a,stroke-width:2px',
-      'classDef process fill:#1f2937,stroke:#6b7280,color:#f3f4f6,stroke-width:1px',
-    ]
-  }
-
-  return [
-    'classDef startEnd fill:#eff6ff,stroke:#3b82f6,color:#1e40af,stroke-width:2px',
-    'classDef decision fill:#fffbeb,stroke:#f59e0b,color:#92400e,stroke-width:2px',
-    'classDef process fill:#ffffff,stroke:#d1d5db,color:#374151,stroke-width:1px',
-  ]
+export function getFlowchartSteps(scheduler: SchedulerName): FlowStep[] {
+  return FLOWCHARTS[scheduler]
 }
 
-function buildMermaidDiagram(steps: FlowStep[], theme: 'light' | 'dark'): string {
-  const lines: string[] = ['flowchart TD']
+export function buildFlowElements(scheduler: SchedulerName): {
+  nodes: Node[]
+  edges: Edge[]
+  height: number
+  width: number
+} {
+  const steps = FLOWCHARTS[scheduler]
+  let y = 0
+  const nodes: Node[] = []
 
   for (const [index, step] of steps.entries()) {
-    const id = `n${index}`
-    const label = nodeLabel(step)
-
-    switch (step.kind) {
-      case 'start':
-      case 'end':
-        lines.push(`    ${id}(["${label}"])`)
-        break
-      case 'process':
-        lines.push(`    ${id}["${label}"]`)
-        break
-      case 'decision':
-        lines.push(`    ${id}{"${label}"}`)
-        break
-    }
+    nodes.push({
+      id: `n-${index}`,
+      type: step.kind,
+      position: { x: CENTER_X, y },
+      data: { label: step.label, note: step.note },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+    })
+    y += stepBlockHeight(step)
   }
 
-  for (let index = 0; index < steps.length - 1; index++) {
-    const step = steps[index]
-    const from = `n${index}`
-    const to = `n${index + 1}`
+  const edges: Edge[] = steps.slice(1).map((_, index) => ({
+    id: `e-${index}`,
+    source: `n-${index}`,
+    target: `n-${index + 1}`,
+    type: 'straight',
+    style: { stroke: 'var(--border)', strokeWidth: 1.5 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 14,
+      height: 14,
+      color: 'var(--muted-foreground)',
+    },
+  }))
 
-    if (step.note && step.kind === 'decision') {
-      lines.push(`    ${from} -->|"${escapeMermaid(step.note)}"| ${to}`)
-    } else {
-      lines.push(`    ${from} --> ${to}`)
-    }
+  return {
+    nodes,
+    edges,
+    height: Math.max(y - ARROW_GAP + 8, 120),
+    width: CANVAS_WIDTH,
   }
-
-  const startEnd: string[] = []
-  const decisions: string[] = []
-  const processes: string[] = []
-
-  for (const [index, step] of steps.entries()) {
-    const id = `n${index}`
-    if (step.kind === 'start' || step.kind === 'end') startEnd.push(id)
-    else if (step.kind === 'decision') decisions.push(id)
-    else if (step.kind === 'process') processes.push(id)
-  }
-
-  lines.push(...classDefs(theme))
-
-  if (startEnd.length > 0) lines.push(`    class ${startEnd.join(',')} startEnd`)
-  if (decisions.length > 0) lines.push(`    class ${decisions.join(',')} decision`)
-  if (processes.length > 0) lines.push(`    class ${processes.join(',')} process`)
-
-  return lines.join('\n')
-}
-
-export function buildMermaidDiagramForScheduler(
-  scheduler: SchedulerName,
-  theme: 'light' | 'dark',
-): string {
-  return buildMermaidDiagram(FLOWCHARTS[scheduler], theme)
 }
