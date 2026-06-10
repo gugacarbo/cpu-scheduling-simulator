@@ -7,8 +7,30 @@ import type {
   TimelineSnapshotJob,
 } from '@/lib/types'
 
-function formatJobLabel(job: TimelineSnapshotJob): string {
+export function formatJobLabel(job: TimelineSnapshotJob): string {
   return `${job.taskId}#${job.jobIndex}`
+}
+
+export function findExecutionSliceIndexAtTime(
+  executionLog: SimulationResult['executionLog'],
+  time: number,
+): number | null {
+  for (let index = 0; index < executionLog.length; index++) {
+    const slice = executionLog[index]
+    if (time >= slice.start && time < slice.end) return index
+  }
+  return null
+}
+
+export function getTimelineSnapshotAtTime(
+  config: SimulationConfig,
+  result: SimulationResult,
+  time: number,
+): TimelineSnapshot | undefined {
+  const snapshots = buildTimelineStateTable(config, result)
+  if (time < 0 || time >= snapshots.length) return undefined
+  const snapshot = snapshots[time]
+  return snapshot?.time === time ? snapshot : snapshots.find((entry) => entry.time === time)
 }
 
 export function buildJobsFinishedByTime(result: SimulationResult): Map<number, JobMetrics[]> {

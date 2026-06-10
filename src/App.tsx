@@ -3,7 +3,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { ConfigPanel } from '@/components/ConfigPanel'
 import { LogExport } from '@/components/LogExport'
 import { Header } from '@/components/layout/Header'
-import { PlaybackView } from '@/components/PlaybackView'
 import { StatsPanel } from '@/components/StatsPanel'
 import { TimelineView } from '@/components/TimelineView'
 import { Card, CardContent } from '@/components/ui/card'
@@ -72,7 +71,6 @@ function App() {
             <Tabs defaultValue="timeline" className="space-y-4">
               <TabsList className="flex w-full flex-wrap">
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="playback">Playback</TabsTrigger>
                 <TabsTrigger value="stats">Estatísticas</TabsTrigger>
                 <TabsTrigger value="log">LOG</TabsTrigger>
               </TabsList>
@@ -88,10 +86,6 @@ function App() {
                     />
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              <TabsContent value="playback">
-                <PlaybackView config={config} result={result} />
               </TabsContent>
 
               <TabsContent value="stats">
