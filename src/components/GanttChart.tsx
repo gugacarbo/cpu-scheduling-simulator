@@ -174,58 +174,6 @@ export function GanttChart({
           {allJobs.map((job) => {
             const taskIndex = getTaskIndex(job.taskId)
             const rowTop = taskIndex * ROW_HEIGHT
-            const arrivalX = job.arrival * pixelsPerUnit
-            const color = getTaskColor(taskIndex)
-            const highlighted = resolvedHover?.jobIds.has(job.id) ?? false
-            const markerColor = highlighted ? color : 'hsl(var(--muted-foreground) / 0.35)'
-
-            return (
-              <Tooltip key={`arrival-${job.id}`}>
-                <TooltipTrigger
-                  className={cn(
-                    'absolute border-0 bg-transparent p-0 transition-opacity duration-150',
-                    highlighted ? 'z-[6] opacity-100' : 'z-[1] opacity-70',
-                  )}
-                  style={{
-                    left: arrivalX - 3,
-                    top: rowTop,
-                    width: 6,
-                    height: ROW_HEIGHT - 4,
-                  }}
-                  {...{ [TIMELINE_HOVER_ZONE_ATTR]: '' }}
-                  onMouseEnter={() => onHoverChange?.({ source: 'job', jobId: job.id })}
-                  onMouseLeave={(e) => handleTimelineHoverLeave(e, onHoverChange)}
-                >
-                  <span
-                    className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 transition-[border-color] duration-150"
-                    style={{
-                      width: 0,
-                      height: 0,
-                      borderLeft: '4px solid transparent',
-                      borderRight: '4px solid transparent',
-                      borderTop: `6px solid ${markerColor}`,
-                    }}
-                  />
-                  <span
-                    className="pointer-events-none absolute bottom-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors duration-150"
-                    style={{
-                      top: 6,
-                      backgroundColor: markerColor,
-                    }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-medium">
-                    {job.taskId} job#{job.jobIndex} · chegada em t={job.arrival}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )
-          })}
-
-          {allJobs.map((job) => {
-            const taskIndex = getTaskIndex(job.taskId)
-            const rowTop = taskIndex * ROW_HEIGHT
             const deadlineX = job.absoluteDeadline * pixelsPerUnit
             const missed = missedJobIds.has(job.id)
             const highlighted = resolvedHover?.jobIds.has(job.id) ?? false
@@ -352,6 +300,58 @@ export function GanttChart({
             )
           })}
 
+          {allJobs.map((job) => {
+            const taskIndex = getTaskIndex(job.taskId)
+            const rowTop = taskIndex * ROW_HEIGHT
+            const arrivalX = job.arrival * pixelsPerUnit
+            const color = getTaskColor(taskIndex)
+            const highlighted = resolvedHover?.jobIds.has(job.id) ?? false
+            const markerColor = highlighted ? color : 'hsl(var(--muted-foreground) / 0.35)'
+
+            return (
+              <Tooltip key={`arrival-${job.id}`}>
+                <TooltipTrigger
+                  className={cn(
+                    'absolute border-0 bg-transparent p-0 transition-opacity duration-150',
+                    highlighted ? 'z-[11] opacity-100' : 'z-[3] opacity-70',
+                  )}
+                  style={{
+                    left: arrivalX - 3,
+                    top: rowTop,
+                    width: 6,
+                    height: ROW_HEIGHT - 4,
+                  }}
+                  {...{ [TIMELINE_HOVER_ZONE_ATTR]: '' }}
+                  onMouseEnter={() => onHoverChange?.({ source: 'job', jobId: job.id })}
+                  onMouseLeave={(e) => handleTimelineHoverLeave(e, onHoverChange)}
+                >
+                  <span
+                    className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 transition-[border-color] duration-150"
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: '4px solid transparent',
+                      borderRight: '4px solid transparent',
+                      borderTop: `6px solid ${markerColor}`,
+                    }}
+                  />
+                  <span
+                    className="pointer-events-none absolute bottom-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors duration-150"
+                    style={{
+                      top: 6,
+                      backgroundColor: markerColor,
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">
+                    {job.taskId} job#{job.jobIndex} · chegada em t={job.arrival}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+
           {currentTime !== undefined && (
             <div
               className="absolute top-0 z-10 w-0.5 bg-destructive"
@@ -379,7 +379,21 @@ export function GanttChart({
           <span>chegada na fila</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="inline-block h-3 w-0.5 border-l-2 border-dashed border-destructive" />
+          <svg
+            className="inline-block h-3 w-[2px] shrink-0 text-destructive/90"
+            viewBox="0 0 2 12"
+            aria-hidden="true"
+          >
+            <line
+              x1="1"
+              y1="0"
+              x2="1"
+              y2="12"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray="2 2"
+            />
+          </svg>
           <span>deadline</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
