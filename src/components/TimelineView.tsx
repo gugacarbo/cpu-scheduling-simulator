@@ -114,109 +114,105 @@ export function TimelineView({ config, result, resolvedHover, onHoverChange }: T
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 pb-3 sm:gap-3">
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentTime(0)}>
-              <SkipBack className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentTime((time) => Math.max(0, time - 1))}
-            >
-              <StepBack className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => setPlaying((current) => !current)}>
-              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentTime((time) => Math.min(maxTime, time + 1))}
-            >
-              <StepForward className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => setCurrentTime(maxTime)}>
-              <SkipForward className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="relative flex min-w-[8rem] flex-1 basis-48 items-center self-center">
-            <div className="flex h-8 w-full items-center">
-              <Slider
-                value={[currentTime]}
-                min={0}
-                max={maxTime}
-                step={1}
-                title={`Tempo: ${currentTime} / ${maxTime}`}
-                onValueChange={(value) => {
-                  setPlaying(false)
-                  const next = Array.isArray(value) ? value[0] : value
-                  setCurrentTime(next)
-                }}
-              />
-            </div>
-            <p className="absolute inset-x-0 top-full mt-1 text-center text-[10px] leading-none text-muted-foreground tabular-nums sm:text-xs">
-              Tempo: {currentTime} / {maxTime}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-sm text-muted-foreground">Velocidade</span>
-            <Select value={speed} onValueChange={(value) => value && setSpeed(value)}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SPEED_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 pb-3 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Button variant="outline" size="icon" onClick={() => setCurrentTime(0)}>
+            <SkipBack className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentTime((time) => Math.max(0, time - 1))}
+          >
+            <StepBack className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => setPlaying((current) => !current)}>
+            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentTime((time) => Math.min(maxTime, time + 1))}
+          >
+            <StepForward className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => setCurrentTime(maxTime)}>
+            <SkipForward className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="shrink-0 rounded-lg border bg-muted/30 px-3 py-2 lg:w-56">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-              Agora executando
+        <div className="relative flex min-w-[8rem] flex-1 basis-48 items-center self-center">
+          <div className="flex h-8 w-full items-center">
+            <Slider
+              value={[currentTime]}
+              min={0}
+              max={maxTime}
+              step={1}
+              title={`Tempo: ${currentTime} / ${maxTime}`}
+              onValueChange={(value) => {
+                setPlaying(false)
+                const next = Array.isArray(value) ? value[0] : value
+                setCurrentTime(next)
+              }}
+            />
+          </div>
+          <p className="absolute inset-x-0 top-full mt-1 text-center text-[10px] leading-none text-muted-foreground tabular-nums sm:text-xs">
+            Tempo: {currentTime} / {maxTime}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-sm text-muted-foreground">Velocidade</span>
+          <Select value={speed} onValueChange={(value) => value && setSpeed(value)}>
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SPEED_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-muted/30 px-3 py-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            Agora executando
+          </span>
+          {activeSegment ? (
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              [{activeSegment.start}, {activeSegment.end})
             </span>
-            {activeSegment ? (
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                [{activeSegment.start}, {activeSegment.end})
-              </span>
-            ) : null}
-          </div>
-          {currentSnapshot || currentSlice ? (
-            <div className="mt-1 flex flex-col gap-1">
-              {(activeSegment ?? currentSlice) ? (
-                <CompactJobChip
-                  job={activeSegment ?? currentSlice!}
-                  className="w-fit text-sm"
-                />
-              ) : currentSnapshot?.running ? (
-                <CompactJobChip job={currentSnapshot.running} className="w-fit text-sm" />
-              ) : (
-                <span className="text-[11px] text-muted-foreground">CPU ociosa</span>
-              )}
-              <div className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Fila atual</span>
-                {currentSnapshot && currentSnapshot.queue.length > 0 ? (
-                  currentSnapshot.queue.map((job) => (
-                    <CompactJobChip key={job.jobId} job={job} />
-                  ))
-                ) : (
-                  <span className="text-[10px] text-muted-foreground">—</span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">CPU ociosa em t={currentTime}</p>
-          )}
+          ) : null}
         </div>
+
+        {currentSnapshot || currentSlice ? (
+          <>
+            {(activeSegment ?? currentSlice) ? (
+              <CompactJobChip job={activeSegment ?? currentSlice!} className="text-sm" />
+            ) : currentSnapshot?.running ? (
+              <CompactJobChip job={currentSnapshot.running} className="text-sm" />
+            ) : (
+              <span className="text-[11px] text-muted-foreground">CPU ociosa</span>
+            )}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              <span className="shrink-0 text-[10px] text-muted-foreground">Fila atual</span>
+              {currentSnapshot && currentSnapshot.queue.length > 0 ? (
+                currentSnapshot.queue.map((job) => (
+                  <CompactJobChip key={job.jobId} job={job} />
+                ))
+              ) : (
+                <span className="text-[10px] text-muted-foreground">—</span>
+              )}
+            </div>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">CPU ociosa em t={currentTime}</span>
+        )}
       </div>
 
       <GanttChart
