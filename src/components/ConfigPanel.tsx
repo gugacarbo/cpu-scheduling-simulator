@@ -64,9 +64,13 @@ const AUTO_SIMULATE_MAX_SIMULATION_TIME = 100
 const AUTO_SIMULATE_DEBOUNCE_MS = 300
 
 const EXAMPLE_PRESETS = {
-  rr: { path: '/examples/rr-example.json', scheduler: 'RR' as const, label: 'Round Robin (RR)' },
+  rr: {
+    path: `${import.meta.env.BASE_URL}examples/rr-example.json`,
+    scheduler: 'RR' as const,
+    label: 'Round Robin (RR)',
+  },
   edf: {
-    path: '/examples/edf-example.json',
+    path: `${import.meta.env.BASE_URL}examples/edf-example.json`,
     scheduler: 'EDF' as const,
     label: 'Earliest Deadline First (EDF)',
   },
