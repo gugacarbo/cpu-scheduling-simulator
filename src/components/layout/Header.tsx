@@ -18,7 +18,7 @@ export function Header({ result, theme, onToggleTheme }: HeaderProps) {
     <header className="flex flex-wrap items-center justify-between gap-4 border-b px-4 py-3 md:px-6">
       <div className="flex items-center gap-3">
         <Cpu className="h-6 w-6 text-primary" />
-        <h1 className="text-lg font-semibold md:text-xl">Simulador de Escalonamento</h1>
+        <h1 className="text-lg font-semibold md:text-xl">CPU Scheduling Simulator</h1>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

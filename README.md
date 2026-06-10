@@ -1,4 +1,4 @@
-# Simulador de Escalonamento
+# CPU Scheduling Simulator
 
 Aplicação web para simular algoritmos de escalonamento de CPU (RR, RR Prioridade, RM e EDF), visualizar o Gantt, reproduzir a execução passo a passo e exportar o LOG em TXT.
 
