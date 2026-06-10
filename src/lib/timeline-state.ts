@@ -7,13 +7,8 @@ import type {
   TimelineSnapshotJob,
 } from '@/lib/types'
 
-export function formatJobLabel(job: TimelineSnapshotJob): string {
+function formatJobLabel(job: TimelineSnapshotJob): string {
   return `${job.taskId}#${job.jobIndex}`
-}
-
-export function formatQueueLabels(queue: TimelineSnapshotJob[]): string {
-  if (queue.length === 0) return '—'
-  return queue.map(formatJobLabel).join(', ')
 }
 
 export function buildJobsFinishedByTime(result: SimulationResult): Map<number, JobMetrics[]> {
@@ -37,7 +32,7 @@ export function buildTimelineStateTable(
   return result.timelineSnapshots.slice(0, config.simulation_time)
 }
 
-export function getTaskConfigForJob(
+function getTaskConfigForJob(
   config: SimulationConfig,
   job: TimelineSnapshotJob,
 ): TaskConfig | undefined {
@@ -51,7 +46,7 @@ export interface JobProgress {
   total: number
 }
 
-export interface JobTooltipField {
+interface JobTooltipField {
   label: string
   value: string
 }

@@ -20,7 +20,7 @@ export const simulationConfigSchema = z.object({
 export type RawSimulationConfig = z.infer<typeof simulationConfigSchema>
 export type RawTaskConfig = z.infer<typeof taskSchema>
 
-export function isSchedulerName(value: string): value is SchedulerName {
+function isSchedulerName(value: string): value is SchedulerName {
   return schedulerNameSchema.safeParse(value).success
 }
 
@@ -37,11 +37,7 @@ export function serializeSimulationConfig(config: RawSimulationConfig): string {
   return JSON.stringify(config, null, 2)
 }
 
-export function normalizeSchedulerName(name: SchedulerName): SchedulerName {
-  return name === 'RR_PRIORITY' ? 'PRR' : name
-}
-
-export function parseSimulationConfig(raw: unknown): SimulationConfig {
+function parseSimulationConfig(raw: unknown): SimulationConfig {
   const parsed = simulationConfigSchema.parse(raw)
   const scheduler_name = resolveSchedulerName(parsed.scheduler_name)
 

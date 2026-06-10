@@ -1,4 +1,4 @@
-import type { SchedulerName, SimulationConfig, TaskConfig } from '@/lib/types'
+import type { SchedulerName, TaskConfig } from '@/lib/types'
 
 export type ParameterKey =
   | 'simulation_time'
@@ -8,7 +8,7 @@ export type ParameterKey =
   | 'period_time'
   | 'deadline'
 
-export type ParameterScope = 'global' | 'task'
+type ParameterScope = 'global' | 'task'
 
 export interface AlgorithmParameter {
   key: ParameterKey
@@ -149,7 +149,7 @@ const EDF_PARAMETERS: AlgorithmParameter[] = [
   },
 ]
 
-export const ALGORITHM_PARAMETERS: Record<SchedulerName, AlgorithmParameter[]> = {
+const ALGORITHM_PARAMETERS: Record<SchedulerName, AlgorithmParameter[]> = {
   RR: RR_PARAMETERS,
   PRR: PRR_PARAMETERS,
   RR_PRIORITY: PRR_PARAMETERS,
@@ -157,44 +157,8 @@ export const ALGORITHM_PARAMETERS: Record<SchedulerName, AlgorithmParameter[]> =
   EDF: EDF_PARAMETERS,
 }
 
-function summarizeNumericValues(values: number[]): string {
-  if (values.length === 0) return '—'
-
-  const unique = [...new Set(values)].sort((a, b) => a - b)
-  if (unique.length === 1) return `${unique[0]}u`
-
-  const min = unique[0]
-  const max = unique[unique.length - 1]
-  if (unique.length <= 5) {
-    return unique.map((value) => `${value}u`).join(', ')
-  }
-
-  return `${min}–${max}u`
-}
-
-export function getParameterValue(key: ParameterKey, config: SimulationConfig): string {
-  switch (key) {
-    case 'simulation_time':
-      return `${config.simulation_time}u`
-    case 'quantum':
-      return summarizeNumericValues(config.tasks.map((task) => task.quantum))
-    case 'offset':
-      return summarizeNumericValues(config.tasks.map((task) => task.offset))
-    case 'computation_time':
-      return summarizeNumericValues(config.tasks.map((task) => task.computation_time))
-    case 'period_time':
-      return summarizeNumericValues(config.tasks.map((task) => task.period_time))
-    case 'deadline':
-      return summarizeNumericValues(config.tasks.map((task) => task.deadline))
-  }
-}
-
-export function getAlgorithmParameters(scheduler: SchedulerName): AlgorithmParameter[] {
+function getAlgorithmParameters(scheduler: SchedulerName): AlgorithmParameter[] {
   return ALGORITHM_PARAMETERS[scheduler]
-}
-
-export function getGlobalParameters(scheduler: SchedulerName): AlgorithmParameter[] {
-  return getAlgorithmParameters(scheduler).filter((parameter) => parameter.scope === 'global')
 }
 
 export function getTaskParameters(scheduler: SchedulerName): AlgorithmParameter[] {

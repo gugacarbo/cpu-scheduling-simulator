@@ -2,15 +2,15 @@ import type { Edge, Node } from '@xyflow/react'
 import { MarkerType } from '@xyflow/react'
 import type { SchedulerName } from '@/lib/types'
 
-export type FlowNodeKind = 'start' | 'end' | 'process' | 'decision'
+type FlowNodeKind = 'start' | 'end' | 'process' | 'decision'
 
-export interface FlowStep {
+interface FlowStep {
   label: string
   kind: FlowNodeKind
   note?: string
 }
 
-export const FLOWCHARTS: Record<SchedulerName, FlowStep[]> = {
+const FLOWCHARTS: Record<SchedulerName, FlowStep[]> = {
   RR: [
     { label: 'Início (t=0)', kind: 'start' },
     {
@@ -138,10 +138,6 @@ const NOTE_HEIGHT = 14
 
 function stepBlockHeight(step: FlowStep): number {
   return NODE_HEIGHT[step.kind] + (step.note ? NOTE_HEIGHT : 0) + ARROW_GAP
-}
-
-export function getFlowchartSteps(scheduler: SchedulerName): FlowStep[] {
-  return FLOWCHARTS[scheduler]
 }
 
 export function buildFlowElements(scheduler: SchedulerName): {

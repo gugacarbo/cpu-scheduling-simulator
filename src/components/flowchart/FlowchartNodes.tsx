@@ -2,7 +2,7 @@ import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { cn } from '@/lib/utils'
 
-export interface FlowNodeData extends Record<string, unknown> {
+interface FlowNodeData extends Record<string, unknown> {
   label: string
   note?: string
 }
@@ -40,7 +40,7 @@ function FlowHandles() {
   )
 }
 
-export function StartNode({ data }: NodeProps) {
+function StartNode({ data }: NodeProps) {
   const { label, note } = readData(data)
 
   return (
@@ -59,7 +59,7 @@ export function StartNode({ data }: NodeProps) {
   )
 }
 
-export function EndNode({ data }: NodeProps) {
+function EndNode({ data }: NodeProps) {
   const { label, note } = readData(data)
 
   return (
@@ -78,7 +78,7 @@ export function EndNode({ data }: NodeProps) {
   )
 }
 
-export function ProcessNode({ data }: NodeProps) {
+function ProcessNode({ data }: NodeProps) {
   const { label, note } = readData(data)
 
   return (
@@ -97,7 +97,7 @@ export function ProcessNode({ data }: NodeProps) {
   )
 }
 
-export function DecisionNode({ data }: NodeProps) {
+function DecisionNode({ data }: NodeProps) {
   const { label, note } = readData(data)
 
   return (

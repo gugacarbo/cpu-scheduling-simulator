@@ -35,7 +35,7 @@ export interface ResolvedTimelineHighlight {
   timeRange: [number, number] | null
 }
 
-export interface ContiguousJobSliceGroup {
+interface ContiguousJobSliceGroup {
   startIndex: number
   endIndex: number
   start: number
@@ -43,7 +43,7 @@ export interface ContiguousJobSliceGroup {
 }
 
 /** Adjacent execution slices of the same job (same jobId, consecutive times). */
-export function getContiguousJobSliceGroup(
+function getContiguousJobSliceGroup(
   executionLog: SimulationResult['executionLog'],
   sliceIndex: number,
 ): ContiguousJobSliceGroup | null {

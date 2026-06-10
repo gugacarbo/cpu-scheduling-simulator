@@ -20,7 +20,7 @@ function highestPriorityJob(ctx: SchedulerContext): Job | null {
   return ctx.readyQueue.reduce((best, job) => (compareRmPriority(job, best, ctx) < 0 ? job : best))
 }
 
-export const rateMonotonicStrategy: SchedulerStrategy = {
+const rateMonotonicStrategy: SchedulerStrategy = {
   name: 'RM',
 
   pickNext(ctx: SchedulerContext): Job | null {

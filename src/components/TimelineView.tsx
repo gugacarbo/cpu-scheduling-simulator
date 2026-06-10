@@ -3,8 +3,6 @@ import { TimelineStateTable } from '@/components/TimelineStateTable'
 import type { ResolvedTimelineHighlight, TimelineHoverState } from '@/lib/timeline-hover'
 import type { SimulationConfig, SimulationResult } from '@/lib/types'
 
-export type { TimelineHoverState } from '@/lib/timeline-hover'
-
 interface TimelineViewProps {
   config: SimulationConfig
   result: SimulationResult

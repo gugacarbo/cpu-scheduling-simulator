@@ -15,7 +15,7 @@ function highestPriorityJob(queue: Job[]): Job | null {
   return queue.reduce((best, job) => (compareEdfPriority(job, best) < 0 ? job : best))
 }
 
-export const edfStrategy: SchedulerStrategy = {
+const edfStrategy: SchedulerStrategy = {
   name: 'EDF',
 
   pickNext(ctx: SchedulerContext): Job | null {

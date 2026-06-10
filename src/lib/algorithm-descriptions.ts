@@ -5,7 +5,7 @@ export interface AlgorithmDescription {
   body: string
 }
 
-export const ALGORITHM_DESCRIPTIONS: Record<SchedulerName, AlgorithmDescription> = {
+const ALGORITHM_DESCRIPTIONS: Record<SchedulerName, AlgorithmDescription> = {
   RR: {
     title: 'Round Robin (RR)',
     body: 'Algoritmo preemptivo que mantém as tarefas prontas em uma fila circular. Cada tarefa executa por um quantum de tempo; ao esgotá-lo, vai para o fim da fila e a próxima é despachada. Garante alternância justa entre processos, evitando que tarefas longas monopolizem a CPU.',
