@@ -1,7 +1,6 @@
 import {
   AlarmClock,
   ChevronDown,
-  Circle,
   Clock,
   Cpu,
   FileJson,
@@ -462,15 +461,9 @@ export function ConfigPanel({
               <Layers className="h-3 w-3 shrink-0" aria-hidden="true" />
               {validation.data.tasks.length} tarefa{validation.data.tasks.length === 1 ? '' : 's'}
             </span>
-            <Circle className="h-1 w-1 shrink-0 fill-current" aria-hidden="true" />
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
               {validation.data.simulation_time}u
-            </span>
-            <Circle className="h-1 w-1 shrink-0 fill-current" aria-hidden="true" />
-            <span className="inline-flex items-center gap-1">
-              <Cpu className="h-3 w-3 shrink-0" aria-hidden="true" />
-              {effectiveScheduler}
             </span>
           </div>
 

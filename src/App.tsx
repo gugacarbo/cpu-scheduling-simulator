@@ -35,7 +35,7 @@ function App() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Header result={result} theme={theme} onToggleTheme={toggleTheme} />
+      <Header theme={theme} onToggleTheme={toggleTheme} />
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: clears linked hover when pointer leaves timeline area */}
       <div
