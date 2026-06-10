@@ -2,11 +2,19 @@ import { useCallback, useEffect, useState } from 'react'
 
 type Theme = 'light' | 'dark'
 
+export const THEME_STORAGE_KEY = 'theme'
+
+function getStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'light'
+
+  const stored = localStorage.getItem(THEME_STORAGE_KEY)
+  if (stored === 'dark' || stored === 'light') return stored
+
+  return 'light'
+}
+
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'light'
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-  })
+  const [theme, setTheme] = useState<Theme>(getStoredTheme)
 
   useEffect(() => {
     const root = document.documentElement
@@ -15,6 +23,7 @@ export function useTheme() {
     } else {
       root.classList.remove('dark')
     }
+    localStorage.setItem(THEME_STORAGE_KEY, theme)
   }, [theme])
 
   const toggleTheme = useCallback(() => {
