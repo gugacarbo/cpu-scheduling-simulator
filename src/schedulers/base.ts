@@ -67,6 +67,53 @@ function addToQueue(queue: Job[], job: Job): Job[] {
   return [...queue, job]
 }
 
+function isJobActive(job: Job): boolean {
+  return job.finish === undefined
+}
+
+function terminateJobAtDeadline(job: Job): void {
+  if (!isJobActive(job)) return
+  job.finish = job.absoluteDeadline
+  job.remainingTime = 0
+  job.terminatedByDeadline = true
+}
+
+function expireJobsAtCurrentTime(ctx: SchedulerContext): void {
+  if (
+    ctx.running &&
+    isJobActive(ctx.running) &&
+    ctx.currentTime >= ctx.running.absoluteDeadline
+  ) {
+    terminateJobAtDeadline(ctx.running)
+    ctx.running = null
+    ctx.sliceQuantumUsed = 0
+  }
+
+  ctx.readyQueue = ctx.readyQueue.filter((job) => {
+    if (isJobActive(job) && ctx.currentTime >= job.absoluteDeadline) {
+      terminateJobAtDeadline(job)
+      return false
+    }
+    return true
+  })
+}
+
+function earliestPendingDeadline(ctx: SchedulerContext): number {
+  let next = Infinity
+
+  if (ctx.running && isJobActive(ctx.running) && ctx.running.absoluteDeadline > ctx.currentTime) {
+    next = Math.min(next, ctx.running.absoluteDeadline)
+  }
+
+  for (const job of ctx.readyQueue) {
+    if (isJobActive(job) && job.absoluteDeadline > ctx.currentTime) {
+      next = Math.min(next, job.absoluteDeadline)
+    }
+  }
+
+  return next
+}
+
 const MAX_SIMULATION_ITERATIONS = 1_000_000
 
 interface SnapshotCloneOptions {
@@ -93,13 +140,19 @@ function cloneJobForSnapshot(job: Job, runningAdjust?: SnapshotCloneOptions): Ti
   }
 }
 
-function createSnapshotRecorder(config: SimulationConfig, ctx: SchedulerContext) {
+function createSnapshotRecorder(
+  config: SimulationConfig,
+  ctx: SchedulerContext,
+  processReleasesUpTo: (time: number) => void,
+) {
   const snapshots: TimelineSnapshot[] = []
   let nextSnapshotTime = 0
 
   const fillSnapshotsUpTo = (endTime: number, sliceStart?: number) => {
     const limit = Math.min(endTime, config.simulation_time)
     while (nextSnapshotTime < limit) {
+      processReleasesUpTo(nextSnapshotTime)
+
       const runningAdjust =
         ctx.running && sliceStart !== undefined
           ? { snapshotTime: nextSnapshotTime, sliceStart }
@@ -137,7 +190,40 @@ export function runSimulation(
     sliceQuantumUsed: 0,
   }
 
-  const { snapshots, fillSnapshotsUpTo } = createSnapshotRecorder(config, ctx)
+  const processReleasesUpTo = (time: number) => {
+    while (releaseIndex < releases.length && releases[releaseIndex].arrival <= time) {
+      const incoming = releases[releaseIndex]
+      releaseIndex++
+
+      if (ctx.running && strategy.shouldPreemptOnRelease(ctx, incoming)) {
+        ctx.readyQueue = addToQueue(ctx.readyQueue, ctx.running)
+        ctx.running = null
+        ctx.sliceQuantumUsed = 0
+      }
+
+      ctx.readyQueue = addToQueue(ctx.readyQueue, incoming)
+    }
+  }
+
+  const capDurationAtPreemptingRelease = (proposedDuration: number): number => {
+    let duration = proposedDuration
+    for (let i = releaseIndex; i < releases.length; i++) {
+      const arrival = releases[i].arrival
+      if (arrival >= ctx.currentTime + duration) break
+      if (arrival <= ctx.currentTime) continue
+      if (ctx.running && strategy.shouldPreemptOnRelease(ctx, releases[i])) {
+        duration = Math.min(duration, arrival - ctx.currentTime)
+        break
+      }
+    }
+    return duration
+  }
+
+  const { snapshots, fillSnapshotsUpTo } = createSnapshotRecorder(
+    config,
+    ctx,
+    processReleasesUpTo,
+  )
 
   const nextReleaseTime = (): number =>
     releaseIndex < releases.length ? releases[releaseIndex].arrival : Infinity
@@ -154,18 +240,7 @@ export function runSimulation(
         `Simulation exceeded ${MAX_SIMULATION_ITERATIONS} iterations at t=${ctx.currentTime}`,
       )
     }
-    while (releaseIndex < releases.length && releases[releaseIndex].arrival <= ctx.currentTime) {
-      const incoming = releases[releaseIndex]
-      releaseIndex++
-
-      if (ctx.running && strategy.shouldPreemptOnRelease(ctx, incoming)) {
-        ctx.readyQueue = addToQueue(ctx.readyQueue, ctx.running)
-        ctx.running = null
-        ctx.sliceQuantumUsed = 0
-      }
-
-      ctx.readyQueue = addToQueue(ctx.readyQueue, incoming)
-    }
+    processReleasesUpTo(ctx.currentTime)
 
     if (!ctx.running) {
       const next = strategy.pickNext(ctx)
@@ -179,31 +254,47 @@ export function runSimulation(
       }
     }
 
+    expireJobsAtCurrentTime(ctx)
+
     if (!ctx.running) {
       if (releaseIndex >= releases.length) {
         fillSnapshotsUpTo(config.simulation_time)
         break
       }
       const nextRelease = nextReleaseTime()
-      fillSnapshotsUpTo(nextRelease)
-      ctx.currentTime = nextRelease
+      const nextDeadline = earliestPendingDeadline(ctx)
+      const nextEvent = Math.min(nextRelease, nextDeadline, config.simulation_time)
+      if (nextEvent > ctx.currentTime) {
+        fillSnapshotsUpTo(nextEvent)
+        ctx.currentTime = nextEvent
+      }
+      expireJobsAtCurrentTime(ctx)
       continue
     }
 
     const runDuration = strategy.getRunDuration(ctx)
-    const nextRelease = nextReleaseTime()
     const timeLeft = config.simulation_time - ctx.currentTime
-    const duration = Math.min(runDuration, nextRelease - ctx.currentTime, timeLeft)
+    const runningDeadline = ctx.running.absoluteDeadline
+    const baseDuration = Math.min(
+      runDuration,
+      timeLeft,
+      runningDeadline - ctx.currentTime,
+    )
+    const duration = capDurationAtPreemptingRelease(baseDuration)
 
     if (duration <= 0) {
       if (ctx.currentTime >= config.simulation_time) {
         fillSnapshotsUpTo(config.simulation_time)
         break
       }
-      const nextEvent = Math.min(nextRelease, config.simulation_time)
+      expireJobsAtCurrentTime(ctx)
+      if (ctx.running) continue
+      const nextDeadline = earliestPendingDeadline(ctx)
+      const nextEvent = Math.min(nextReleaseTime(), nextDeadline, config.simulation_time)
       if (nextEvent > ctx.currentTime) {
         fillSnapshotsUpTo(nextEvent)
         ctx.currentTime = nextEvent
+        expireJobsAtCurrentTime(ctx)
         continue
       }
       fillSnapshotsUpTo(config.simulation_time)
@@ -226,6 +317,13 @@ export function runSimulation(
     running.remainingTime -= duration
     ctx.sliceQuantumUsed += duration
     ctx.currentTime = sliceEnd
+
+    if (isJobActive(running) && ctx.currentTime >= running.absoluteDeadline) {
+      terminateJobAtDeadline(running)
+      ctx.running = null
+      ctx.sliceQuantumUsed = 0
+      continue
+    }
 
     if (running.remainingTime <= 1e-9) {
       running.finish = ctx.currentTime
@@ -303,7 +401,7 @@ function buildJobMetrics(jobs: Job[]): JobMetrics[] {
       finish,
       tat,
       wt,
-      missedDeadline: finish > job.absoluteDeadline,
+      missedDeadline: finish > job.absoluteDeadline || job.terminatedByDeadline === true,
     }
   })
 }

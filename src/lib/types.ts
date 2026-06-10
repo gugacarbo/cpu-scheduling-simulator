@@ -26,6 +26,7 @@ export interface Job {
   remainingTime: number
   start?: number
   finish?: number
+  terminatedByDeadline?: boolean
   quantum: number
 }
 
