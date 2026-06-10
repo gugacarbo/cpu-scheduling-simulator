@@ -24,13 +24,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -73,10 +73,6 @@ const EXAMPLE_PRESETS = {
 } as const
 
 type ExamplePreset = keyof typeof EXAMPLE_PRESETS
-
-const OTHER_EXAMPLE_PRESETS = Object.entries(EXAMPLE_PRESETS).filter(
-  ([id]) => id !== 'rr',
-) as [Exclude<ExamplePreset, 'rr'>, (typeof EXAMPLE_PRESETS)[Exclude<ExamplePreset, 'rr'>]][]
 
 function requiresManualSimulate(config: SimulationConfig): boolean {
   return (
@@ -186,6 +182,7 @@ export function ConfigPanel({
   onHoverChange,
 }: ConfigPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const skipAutoSimulateRef = useRef(false)
   const [dragOver, setDragOver] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogDraftText, setDialogDraftText] = useState('')
@@ -216,8 +213,8 @@ export function ConfigPanel({
   const algorithmDescription = getAlgorithmDescription(effectiveScheduler)
   const taskParameters = getTaskParameters(effectiveScheduler)
   const hasValidConfig = validation?.success === true
-  const showManualSimulate =
-    hasValidConfig && requiresManualSimulate(validation.data)
+  const hasTasks = hasValidConfig && validation.data.tasks.length > 0
+  const showManualSimulate = hasValidConfig && requiresManualSimulate(validation.data)
 
   const autoSimulateConfig = useMemo((): SimulationConfig | null => {
     if (!validation?.success || requiresManualSimulate(validation.data)) {
@@ -231,6 +228,10 @@ export function ConfigPanel({
 
   useEffect(() => {
     if (!autoSimulateConfig || dialogOpen) return
+    if (skipAutoSimulateRef.current) {
+      skipAutoSimulateRef.current = false
+      return
+    }
 
     const timer = window.setTimeout(() => {
       if (dialogOpenRef.current) return
@@ -239,6 +240,10 @@ export function ConfigPanel({
 
     return () => window.clearTimeout(timer)
   }, [autoSimulateConfig, onSimulate, dialogOpen])
+
+  useEffect(() => {
+    if (!hasTasks) setFlowchartOpen(false)
+  }, [hasTasks])
 
   const commitDialogDraft = useCallback(() => {
     const draft = dialogDraftRef.current
@@ -284,18 +289,34 @@ export function ConfigPanel({
     [onJsonChange],
   )
 
-  const loadExample = async (name: ExamplePreset) => {
-    const preset = EXAMPLE_PRESETS[name]
-    const response = await fetch(preset.path)
-    const text = await response.text()
-    if (dialogOpen) {
-      setDialogDraftText(text)
-    } else {
-      onJsonChange(text)
-      onSchedulerChange(preset.scheduler)
-    }
-    setShowSimulateError(false)
-  }
+  const loadExample = useCallback(
+    async (name: ExamplePreset) => {
+      const preset = EXAMPLE_PRESETS[name]
+      const response = await fetch(preset.path)
+      const text = await response.text()
+      const nextValidation = validateSimulationConfigJson(text)
+
+      if (dialogOpenRef.current) {
+        setDialogDraftText(text)
+      } else {
+        onJsonChange(text)
+        onSchedulerChange(preset.scheduler)
+      }
+      setShowSimulateError(false)
+
+      if (nextValidation?.success) {
+        skipAutoSimulateRef.current = true
+        const config = {
+          ...nextValidation.data,
+          scheduler_name: preset.scheduler,
+        }
+        startSimulateTransition(() => {
+          onSimulate(config)
+        })
+      }
+    },
+    [onJsonChange, onSchedulerChange, onSimulate],
+  )
 
   const handleManualSimulate = () => {
     if (!validation?.success) {
@@ -317,48 +338,33 @@ export function ConfigPanel({
       <CardHeader className="gap-2 border-b border-border">
         <CardTitle>Configuração</CardTitle>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-w-0 flex-1"
-            onClick={openDialog}
-          >
-            <FileJson className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-            Editar Tasks
-          </Button>
-          {!hasValidConfig && (
-            <ButtonGroup className="min-w-0 flex-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-w-0 flex-1"
-                onClick={() => loadExample('rr')}
+          <ButtonGroup className="min-w-0 flex-1">
+            <Button variant="outline" size="sm" className="min-w-0 flex-1" onClick={openDialog}>
+              <FileJson className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+              {hasTasks ? 'Editar Tasks' : 'Adicionar Tasks'}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="px-2!"
+                    aria-label="Carregar exemplo"
+                  />
+                }
               >
-                Exemplo RR
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="px-2!"
-                      aria-label="Outros exemplos"
-                    />
-                  }
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  {OTHER_EXAMPLE_PRESETS.map(([id, preset]) => (
-                    <DropdownMenuItem key={id} onClick={() => loadExample(id)}>
-                      {preset.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </ButtonGroup>
-          )}
+                <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {(Object.keys(EXAMPLE_PRESETS) as ExamplePreset[]).map((id) => (
+                  <DropdownMenuItem key={id} onClick={() => loadExample(id)}>
+                    {EXAMPLE_PRESETS[id].label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ButtonGroup>
           {showManualSimulate ? (
             <Button
               className="min-w-0 flex-1"
@@ -377,52 +383,64 @@ export function ConfigPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="w-full space-y-1">
-          <label htmlFor="scheduler-select" className="text-sm font-medium">
-            Algoritmo
-          </label>
-          <Select
-            value={effectiveScheduler}
-            onValueChange={(value) => {
-              if (value) onSchedulerChange(value as SchedulerName)
-            }}
+        <div
+          className={cn('space-y-2', !hasTasks && 'pointer-events-none opacity-50')}
+          aria-disabled={!hasTasks}
+        >
+          <div className="w-full space-y-1">
+            <label
+              htmlFor="scheduler-select"
+              className={cn('text-sm font-medium', !hasTasks && 'text-muted-foreground')}
+            >
+              Algoritmo
+            </label>
+            <Select
+              value={effectiveScheduler}
+              disabled={!hasTasks}
+              onValueChange={(value) => {
+                if (value) onSchedulerChange(value as SchedulerName)
+              }}
+            >
+              <SelectTrigger id="scheduler-select" className="h-8 w-full" disabled={!hasTasks}>
+                <SelectValue>{selectedSchedulerLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SCHEDULER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <button
+            type="button"
+            className="text-xs font-medium text-primary underline-offset-2 hover:underline disabled:pointer-events-none disabled:opacity-50 disabled:no-underline"
+            aria-expanded={flowchartOpen}
+            disabled={!hasTasks}
+            onClick={() => setFlowchartOpen((open) => !open)}
           >
-            <SelectTrigger id="scheduler-select" className="h-8 w-full">
-              <SelectValue>{selectedSchedulerLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {SCHEDULER_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {flowchartOpen ? 'Ocultar' : 'Detalhes'}
+          </button>
+
+          {hasTasks ? (
+            <Accordion
+              value={flowchartOpen ? ['details'] : []}
+              onValueChange={(value) => setFlowchartOpen(value.includes('details'))}
+              className="border-0"
+            >
+              <AccordionItem value="details" className="border-0">
+                <AccordionContent className="space-y-3 pt-1 pb-0">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {algorithmDescription.body}
+                  </p>
+                  <AlgorithmFlowchart key={effectiveScheduler} scheduler={effectiveScheduler} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          ) : null}
         </div>
-
-        <button
-          type="button"
-          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
-          aria-expanded={flowchartOpen}
-          onClick={() => setFlowchartOpen((open) => !open)}
-        >
-          {flowchartOpen ? 'Ocultar' : 'Detalhes'}
-        </button>
-
-        <Accordion
-          value={flowchartOpen ? ['details'] : []}
-          onValueChange={(value) => setFlowchartOpen(value.includes('details'))}
-          className="border-0"
-        >
-          <AccordionItem value="details" className="border-0">
-            <AccordionContent className="space-y-3 pt-1 pb-0">
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {algorithmDescription.body}
-              </p>
-              <AlgorithmFlowchart key={effectiveScheduler} scheduler={effectiveScheduler} />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
 
         {validation && !validation.success ? (
           <Badge variant="destructive">JSON inválido</Badge>
