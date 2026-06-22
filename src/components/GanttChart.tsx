@@ -23,6 +23,84 @@ import { generateJobs } from '@/schedulers/base'
 const ROW_HEIGHT = 36
 const LABEL_WIDTH = 48
 const CHART_PADDING = 16
+const MIN_JOB_LABEL_WIDTH_PX = 14
+
+interface JobLabelCandidate {
+  key: string
+  jobId: string
+  start: number
+  end: number
+  /** Higher priority wins when segments overlap (execution > wait > planned). */
+  priority: number
+}
+
+function segmentsOverlap(
+  a: Pick<JobLabelCandidate, 'start' | 'end'>,
+  b: Pick<JobLabelCandidate, 'start' | 'end'>,
+): boolean {
+  return a.start < b.end && b.start < a.end
+}
+
+function clusterOverlappingCandidates(candidates: JobLabelCandidate[]): JobLabelCandidate[][] {
+  const clusters: JobLabelCandidate[][] = []
+
+  for (const candidate of candidates) {
+    const overlappingIndices: number[] = []
+    for (let index = 0; index < clusters.length; index++) {
+      if (clusters[index].some((other) => segmentsOverlap(candidate, other))) {
+        overlappingIndices.push(index)
+      }
+    }
+
+    if (overlappingIndices.length === 0) {
+      clusters.push([candidate])
+      continue
+    }
+
+    const merged = [candidate]
+    for (const index of overlappingIndices.sort((a, b) => b - a)) {
+      merged.push(...clusters[index])
+      clusters.splice(index, 1)
+    }
+    clusters.push(merged)
+  }
+
+  return clusters
+}
+
+function pickBestLabelCandidate(candidates: JobLabelCandidate[]): JobLabelCandidate {
+  return [...candidates].sort((a, b) => {
+    if (a.priority !== b.priority) return b.priority - a.priority
+    if (a.start !== b.start) return a.start - b.start
+    return b.end - b.start - (a.end - a.start)
+  })[0]
+}
+
+function getJobLabelKeys(
+  candidates: JobLabelCandidate[],
+  pixelsPerUnit: number,
+): Set<string> {
+  const byJob = new Map<string, JobLabelCandidate[]>()
+
+  for (const candidate of candidates) {
+    const widthPx = (candidate.end - candidate.start) * pixelsPerUnit
+    if (widthPx < MIN_JOB_LABEL_WIDTH_PX) continue
+
+    const list = byJob.get(candidate.jobId) ?? []
+    list.push(candidate)
+    byJob.set(candidate.jobId, list)
+  }
+
+  const keys = new Set<string>()
+
+  for (const list of byJob.values()) {
+    for (const cluster of clusterOverlappingCandidates(list)) {
+      keys.add(pickBestLabelCandidate(cluster).key)
+    }
+  }
+
+  return keys
+}
 
 interface GanttChartProps {
   config: SimulationConfig
@@ -155,6 +233,47 @@ export function GanttChart({
     config.simulation_time,
   )
   const mergedSegments = getMergedExecutionSegments(result.executionLog)
+
+  const labelCandidates: JobLabelCandidate[] = []
+
+  for (const job of allJobs) {
+    if (!isJobIncompleteOnChart(job, result.executionLog)) continue
+
+    const executed = getJobExecutedDuration(job.id, result.executionLog)
+    const segmentStart = job.arrival + executed
+    const segmentEnd = capJobVisualEnd(job, job.arrival + job.computationTime, allJobs)
+    if (segmentEnd <= segmentStart) continue
+
+    labelCandidates.push({
+      key: `planned-${job.id}`,
+      jobId: job.id,
+      start: segmentStart,
+      end: segmentEnd,
+      priority: 1,
+    })
+  }
+
+  for (const segment of queueWaitSegments) {
+    labelCandidates.push({
+      key: `wait-${segment.jobId}-${segment.start}`,
+      jobId: segment.jobId,
+      start: segment.start,
+      end: segment.end,
+      priority: 2,
+    })
+  }
+
+  for (const segment of mergedSegments) {
+    labelCandidates.push({
+      key: `exec-${segment.jobId}-${segment.start}-${segment.end}`,
+      jobId: segment.jobId,
+      start: segment.start,
+      end: segment.end,
+      priority: 3,
+    })
+  }
+
+  const jobLabelKeys = getJobLabelKeys(labelCandidates, pixelsPerUnit)
 
   return (
     <div className={cn('w-full overflow-x-auto', className)}>
@@ -318,7 +437,7 @@ export function GanttChart({
             const top = taskIndex * ROW_HEIGHT + 6
             const missed = missedJobIds.has(job.id)
             const highlighted = resolvedHover?.jobIds.has(job.id) ?? false
-            const showJobIndex = width >= 14
+            const showJobIndex = jobLabelKeys.has(`planned-${job.id}`)
 
             return (
               <Tooltip key={`planned-${job.id}`}>
@@ -370,7 +489,7 @@ export function GanttChart({
             const left = segment.start * pixelsPerUnit
             const top = segment.taskIndex * ROW_HEIGHT + 6
             const highlighted = resolvedHover?.jobIds.has(segment.jobId) ?? false
-            const showJobIndex = width >= 14
+            const showJobIndex = jobLabelKeys.has(`wait-${segment.jobId}-${segment.start}`)
             const missed = missedJobIds.has(segment.jobId)
 
             return (
@@ -438,7 +557,9 @@ export function GanttChart({
             const missed = missedJobIds.has(segment.jobId)
 
             const barWidth = Math.max(width, 2)
-            const showExecutionNumber = barWidth >= 14
+            const showExecutionNumber = jobLabelKeys.has(
+              `exec-${segment.jobId}-${segment.start}-${segment.end}`,
+            )
 
             return (
               <Tooltip key={`${segment.jobId}-${segment.start}-${segment.end}`}>
