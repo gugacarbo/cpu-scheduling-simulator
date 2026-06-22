@@ -1,0 +1,1 @@
+{"root":["./tests/e2e/schedulers.e2e.test.ts","./tests/helpers/fixture-loader.ts","./tests/helpers/normalize-result.ts","./tests/scripts/simulate.test.ts","./scripts/generate-fixtures.ts","./scripts/simulate.ts"],"version":"6.0.3"}
