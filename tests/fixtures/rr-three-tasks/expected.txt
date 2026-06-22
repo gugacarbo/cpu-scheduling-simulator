@@ -1,0 +1,29 @@
+=== SIMULADOR DE ESCALONAMENTO ===
+Algoritmo: RR
+Tempo de simulação: 20 unidades
+Número de tarefas: 3
+
+=== SEQUÊNCIA DE EXECUÇÃO ===
+T0(job#0) [0, 2) -> T1(job#0) [2, 5) -> T0(job#0) [5, 7) -> T2(job#0) [7, 9) -> T0(job#1) [9, 11) -> T2(job#0) [11, 13) -> T0(job#1) [13, 15) -> T1(job#1) [15, 18)
+
+=== UTILIZAÇÃO DO SISTEMA ===
+U = 1.1333
+
+=== TURNAROUND TIME (TAT) ===
+T0: TAT_avg^n = 6.00
+T1: TAT_avg^n = 5.50
+T2: TAT_avg^n = 9.00
+Sistema: TAT_avg = 6.71
+
+=== WAITING TIME (WT) ===
+T0: WT_avg^n = 3.33
+T1: WT_avg^n = 2.50
+T2: WT_avg^n = 6.50
+Sistema: WT_avg = 4.00
+
+=== MAIORES E MENORES WT MÉDIOS ===
+Maior WT médio: T2 (6.50)
+Menor WT médio: T1 (2.50)
+
+=== STARVATION ===
+Nenhuma tarefa sofreu starvation.

@@ -1,0 +1,97 @@
+{
+  "scheduler": "EDF",
+  "schedulable": true,
+  "utilization": 0.990476,
+  "executionLog": [
+    {
+      "taskId": "T0",
+      "jobIndex": 0,
+      "jobId": "T0-0",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "taskId": "T1",
+      "jobIndex": 0,
+      "jobId": "T1-0",
+      "start": 1,
+      "end": 3
+    },
+    {
+      "taskId": "T3",
+      "jobIndex": 0,
+      "jobId": "T3-0",
+      "start": 3,
+      "end": 6
+    },
+    {
+      "taskId": "T0",
+      "jobIndex": 0,
+      "jobId": "T0-0",
+      "start": 6,
+      "end": 10
+    },
+    {
+      "taskId": "T2",
+      "jobIndex": 0,
+      "jobId": "T2-0",
+      "start": 10,
+      "end": 11
+    },
+    {
+      "taskId": "T1",
+      "jobIndex": 1,
+      "jobId": "T1-1",
+      "start": 11,
+      "end": 13
+    },
+    {
+      "taskId": "T2",
+      "jobIndex": 0,
+      "jobId": "T2-0",
+      "start": 13,
+      "end": 14
+    }
+  ],
+  "systemTatAvg": 5.8,
+  "systemWtAvg": 3,
+  "maxWtTaskId": "T2",
+  "minWtTaskId": "T1",
+  "starvationTasks": [],
+  "perTaskStats": [
+    {
+      "taskId": "T0",
+      "tatAvg": 10,
+      "wtAvg": 5,
+      "jobsExecuted": 1,
+      "deadlineMissRate": 0
+    },
+    {
+      "taskId": "T1",
+      "tatAvg": 2,
+      "wtAvg": 0,
+      "jobsExecuted": 2,
+      "deadlineMissRate": 0
+    },
+    {
+      "taskId": "T2",
+      "tatAvg": 11,
+      "wtAvg": 9,
+      "jobsExecuted": 1,
+      "deadlineMissRate": 100
+    },
+    {
+      "taskId": "T3",
+      "tatAvg": 4,
+      "wtAvg": 1,
+      "jobsExecuted": 1,
+      "deadlineMissRate": 0
+    }
+  ],
+  "deadlineMisses": {
+    "perTask": {
+      "T2": 1
+    },
+    "system": 20
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "simulation_time": 16,
+  "scheduler_name": "PRR",
+  "tasks": [
+    {
+      "offset": 0,
+      "computation_time": 6,
+      "period_time": 12,
+      "quantum": 2,
+      "deadline": 12
+    },
+    {
+      "offset": 1,
+      "computation_time": 2,
+      "period_time": 8,
+      "quantum": 2,
+      "deadline": 8
+    },
+    {
+      "offset": 3,
+      "computation_time": 4,
+      "period_time": 10,
+      "quantum": 2,
+      "deadline": 10
+    }
+  ]
+}

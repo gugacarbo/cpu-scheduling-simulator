@@ -1,0 +1,27 @@
+{
+  "simulation_time": 30,
+  "scheduler_name": "RM",
+  "tasks": [
+    {
+      "offset": 0,
+      "computation_time": 1,
+      "period_time": 10,
+      "quantum": 1,
+      "deadline": 10
+    },
+    {
+      "offset": 0,
+      "computation_time": 2,
+      "period_time": 10,
+      "quantum": 2,
+      "deadline": 10
+    },
+    {
+      "offset": 0,
+      "computation_time": 3,
+      "period_time": 10,
+      "quantum": 3,
+      "deadline": 10
+    }
+  ]
+}

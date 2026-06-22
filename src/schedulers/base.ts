@@ -35,7 +35,6 @@ export function generateJobs(config: SimulationConfig): Job[] {
     while (true) {
       const arrival = task.offset + k * task.period_time
       if (arrival >= config.simulation_time) break
-      if (arrival + task.computation_time > config.simulation_time) break
 
       jobs.push({
         id: `${task.id}-${k}`,
@@ -76,6 +75,30 @@ function terminateJobAtDeadline(job: Job): void {
   job.finish = job.absoluteDeadline
   job.remainingTime = 0
   job.terminatedByDeadline = true
+}
+
+function finalizeJobsAtSimulationEnd(ctx: SchedulerContext): void {
+  const simEnd = ctx.config.simulation_time
+
+  const markIncomplete = (job: Job) => {
+    if (!isJobActive(job)) return
+    if (job.start === undefined) {
+      job.start = simEnd
+    }
+    job.finish = simEnd
+    job.terminatedBySimulationEnd = true
+  }
+
+  if (ctx.running) {
+    markIncomplete(ctx.running)
+    ctx.running = null
+    ctx.sliceQuantumUsed = 0
+  }
+
+  for (const job of ctx.readyQueue) {
+    markIncomplete(job)
+  }
+  ctx.readyQueue = []
 }
 
 function expireJobsAtCurrentTime(ctx: SchedulerContext): void {
@@ -340,6 +363,7 @@ export function runSimulation(
     }
   }
 
+  finalizeJobsAtSimulationEnd(ctx)
   fillSnapshotsUpTo(config.simulation_time)
 
   const utilization = computeUtilization(config)
@@ -383,27 +407,34 @@ export function runSimulation(
   }
 }
 
-function hasStartAndFinish(job: Job): job is Job & { start: number; finish: number } {
-  return job.finish !== undefined && job.start !== undefined
-}
 
 function buildJobMetrics(jobs: Job[]): JobMetrics[] {
-  return jobs.filter(hasStartAndFinish).map((job) => {
-    const { finish, start } = job
-    const tat = finish - job.arrival
-    const wt = tat - job.computationTime
-    return {
-      jobId: job.id,
-      taskId: job.taskId,
-      jobIndex: job.jobIndex,
-      arrival: job.arrival,
-      start,
-      finish,
-      tat,
-      wt,
-      missedDeadline: finish > job.absoluteDeadline || job.terminatedByDeadline === true,
-    }
-  })
+  return jobs
+    .filter((job) => job.finish !== undefined)
+    .map((job) => {
+      const finish = job.finish!
+      const start = job.start ?? finish
+      const serviceTime = job.computationTime - Math.max(0, job.remainingTime)
+      const tat = finish - job.arrival
+      const wt = tat - serviceTime
+      const incompleteAtSimulationEnd = job.terminatedBySimulationEnd === true && job.remainingTime > 1e-9
+
+      return {
+        jobId: job.id,
+        taskId: job.taskId,
+        jobIndex: job.jobIndex,
+        arrival: job.arrival,
+        start,
+        finish,
+        tat,
+        wt,
+        missedDeadline:
+          finish > job.absoluteDeadline ||
+          job.terminatedByDeadline === true ||
+          incompleteAtSimulationEnd,
+        incompleteAtSimulationEnd,
+      }
+    })
 }
 
 function buildPerTaskStats(config: SimulationConfig, jobMetrics: JobMetrics[]): TaskStats[] {

@@ -1,0 +1,29 @@
+=== SIMULADOR DE ESCALONAMENTO ===
+Algoritmo: PRR
+Tempo de simulação: 16 unidades
+Número de tarefas: 3
+
+=== SEQUÊNCIA DE EXECUÇÃO ===
+T0(job#0) [0, 1) -> T1(job#0) [1, 3) -> T2(job#0) [3, 5) -> T2(job#0) [5, 7) -> T0(job#0) [7, 9) -> T1(job#1) [9, 11) -> T0(job#0) [11, 12) -> T0(job#1) [12, 13) -> T2(job#1) [13, 15) -> T2(job#1) [15, 16)
+
+=== UTILIZAÇÃO DO SISTEMA ===
+U = 1.1500
+
+=== TURNAROUND TIME (TAT) ===
+T0: TAT_avg^n = 8.00
+T1: TAT_avg^n = 2.00
+T2: TAT_avg^n = 3.50
+Sistema: TAT_avg = 4.50
+
+=== WAITING TIME (WT) ===
+T0: WT_avg^n = 4.50
+T1: WT_avg^n = 0.00
+T2: WT_avg^n = 0.00
+Sistema: WT_avg = 1.50
+
+=== MAIORES E MENORES WT MÉDIOS ===
+Maior WT médio: T0 (4.50)
+Menor WT médio: T2 (0.00)
+
+=== STARVATION ===
+Nenhuma tarefa sofreu starvation.

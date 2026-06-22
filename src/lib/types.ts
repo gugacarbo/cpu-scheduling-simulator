@@ -27,6 +27,7 @@ export interface Job {
   start?: number
   finish?: number
   terminatedByDeadline?: boolean
+  terminatedBySimulationEnd?: boolean
   quantum: number
 }
 
@@ -65,6 +66,7 @@ export interface JobMetrics {
   tat: number
   wt: number
   missedDeadline: boolean
+  incompleteAtSimulationEnd?: boolean
 }
 
 export interface TaskStats {
