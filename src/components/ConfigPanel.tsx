@@ -337,8 +337,8 @@ export function ConfigPanel({
   }
 
   return (
-    <Card size="sm">
-      <CardHeader className="gap-2 border-b border-border">
+    <Card size="sm" className="w-full max-lg:[--card-spacing:--spacing(2.5)]">
+      <CardHeader className="gap-2 border-b border-border max-lg:gap-1.5">
         <CardTitle>Configuração</CardTitle>
         <div className="flex gap-2">
           <ButtonGroup className="min-w-0 flex-1">
@@ -486,29 +486,8 @@ export function ConfigPanel({
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="flex h-[520px] max-h-[calc(100svh-2rem)] flex-col gap-3 overflow-hidden sm:max-w-2xl">
-          <DialogHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pr-8">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Configurar simulação</DialogTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDialogView((view) => (view === 'form' ? 'json' : 'form'))}
-              aria-label={
-                dialogView === 'form' ? 'Alternar para modo JSON' : 'Alternar para modo formulário'
-              }
-            >
-              {dialogView === 'form' ? (
-                <>
-                  <FileJson className="mr-1.5 h-3.5 w-3.5" />
-                  JSON
-                </>
-              ) : (
-                <>
-                  <LayoutList className="mr-1.5 h-3.5 w-3.5" />
-                  Formulário
-                </>
-              )}
-            </Button>
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -569,6 +548,28 @@ export function ConfigPanel({
               onClick={() => loadExample('rr')}
             >
               Exemplo RR
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setDialogView((view) => (view === 'form' ? 'json' : 'form'))}
+              aria-label={
+                dialogView === 'form' ? 'Alternar para modo JSON' : 'Alternar para modo formulário'
+              }
+            >
+              {dialogView === 'form' ? (
+                <>
+                  <FileJson className="mr-1.5 h-3.5 w-3.5" />
+                  JSON
+                </>
+              ) : (
+                <>
+                  <LayoutList className="mr-1.5 h-3.5 w-3.5" />
+                  Formulário
+                </>
+              )}
             </Button>
             <Button
               type="button"

@@ -157,12 +157,23 @@ const ALGORITHM_PARAMETERS: Record<SchedulerName, AlgorithmParameter[]> = {
   EDF: EDF_PARAMETERS,
 }
 
+const TASK_PARAMETER_DISPLAY_ORDER: ParameterKey[] = [
+  'computation_time',
+  'offset',
+  'deadline',
+  'period_time',
+  'quantum',
+]
+
 function getAlgorithmParameters(scheduler: SchedulerName): AlgorithmParameter[] {
   return ALGORITHM_PARAMETERS[scheduler]
 }
 
 export function getTaskParameters(scheduler: SchedulerName): AlgorithmParameter[] {
-  return getAlgorithmParameters(scheduler).filter((parameter) => parameter.scope === 'task')
+  const order = new Map(TASK_PARAMETER_DISPLAY_ORDER.map((key, index) => [key, index]))
+  return getAlgorithmParameters(scheduler)
+    .filter((parameter) => parameter.scope === 'task')
+    .sort((a, b) => (order.get(a.key) ?? 99) - (order.get(b.key) ?? 99))
 }
 
 export function getTaskParameterValue(key: ParameterKey, task: TaskConfig): string {
