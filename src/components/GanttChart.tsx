@@ -2,6 +2,14 @@ import { AlertTriangle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getTaskColor, getTaskIndex } from '@/lib/colors'
 import {
+  capJobVisualEnd,
+  getChartEndTime,
+  getChartTickStep,
+  getJobExecutedDuration,
+  getQueueWaitSegments,
+  isJobIncompleteOnChart,
+} from '@/lib/timeline-chart'
+import {
   getMergedExecutionSegments,
   handleTimelineHoverLeave,
   TIMELINE_HOVER_ZONE_ATTR,
@@ -77,6 +85,51 @@ function getMissedJobSegments(
   return segments
 }
 
+function getMissedJobVisualSegments(
+  allJobs: ReturnType<typeof generateJobs>,
+  executionLog: SimulationResult['executionLog'],
+  missedJobIds: Set<string>,
+): MissedJobSegment[] {
+  const segments = getMissedJobSegments(executionLog, missedJobIds)
+
+  for (const job of allJobs) {
+    if (!missedJobIds.has(job.id)) continue
+
+    const executed = getJobExecutedDuration(job.id, executionLog)
+    if (executed >= job.computationTime - 1e-9) continue
+
+    const plannedEnd = capJobVisualEnd(job, job.arrival + job.computationTime, allJobs)
+    const existing = segments.find((segment) => segment.jobId === job.id)
+
+    if (existing) {
+      existing.end = capJobVisualEnd(job, Math.max(existing.end, plannedEnd), allJobs)
+      continue
+    }
+
+    const start = job.arrival + executed
+    if (plannedEnd <= start) continue
+
+    segments.push({
+      jobId: job.id,
+      taskId: job.taskId,
+      taskIndex: getTaskIndex(job.taskId),
+      start,
+      end: plannedEnd,
+    })
+  }
+
+  return segments
+    .map((segment) => {
+      const job = allJobs.find((candidate) => candidate.id === segment.jobId)
+      if (!job) return segment
+      return {
+        ...segment,
+        end: capJobVisualEnd(job, segment.end, allJobs),
+      }
+    })
+    .filter((segment) => segment.end > segment.start)
+}
+
 export function GanttChart({
   config,
   result,
@@ -86,16 +139,21 @@ export function GanttChart({
   onHoverChange,
   className,
 }: GanttChartProps) {
-  const simulationTime = config.simulation_time
-  const pixelsPerUnit = 40
-  const chartWidth = simulationTime * pixelsPerUnit
-  const tickStep = simulationTime <= 20 ? 1 : 5
   const allJobs = generateJobs(config)
+  const chartEndTime = getChartEndTime(config, allJobs)
+  const pixelsPerUnit = 40
+  const chartWidth = chartEndTime * pixelsPerUnit
+  const tickStep = getChartTickStep(chartEndTime)
 
   const missedJobIds = new Set(
     result.jobs.filter((job) => job.missedDeadline).map((job) => job.jobId),
   )
-  const missedJobSegments = getMissedJobSegments(result.executionLog, missedJobIds)
+  const missedJobSegments = getMissedJobVisualSegments(allJobs, result.executionLog, missedJobIds)
+  const queueWaitSegments = getQueueWaitSegments(
+    allJobs,
+    result.timelineSnapshots,
+    config.simulation_time,
+  )
   const mergedSegments = getMergedExecutionSegments(result.executionLog)
 
   return (
@@ -136,7 +194,7 @@ export function GanttChart({
             )
           })}
 
-          {Array.from({ length: Math.floor(simulationTime / tickStep) + 1 }).map((_, i) => {
+          {Array.from({ length: Math.floor(chartEndTime / tickStep) + 1 }).map((_, i) => {
             const tick = i * tickStep
             return (
               <div
@@ -148,6 +206,17 @@ export function GanttChart({
               </div>
             )
           })}
+
+          {chartEndTime > config.simulation_time && (
+            <div
+              className="pointer-events-none absolute top-0 z-[1] border-l-2 border-dashed border-muted-foreground/40"
+              style={{
+                left: config.simulation_time * pixelsPerUnit,
+                height: config.tasks.length * ROW_HEIGHT,
+              }}
+              title={`Fim da simulação (t=${config.simulation_time})`}
+            />
+          )}
 
           {resolvedHover?.timeColumn !== null && resolvedHover?.timeColumn !== undefined && (
             <div
@@ -231,6 +300,120 @@ export function GanttChart({
                   height: ROW_HEIGHT - 12,
                 }}
               />
+            )
+          })}
+
+          {allJobs.map((job) => {
+            if (!isJobIncompleteOnChart(job, result.executionLog)) return null
+
+            const taskIndex = getTaskIndex(job.taskId)
+            const executed = getJobExecutedDuration(job.id, result.executionLog)
+            const segmentStart = job.arrival + executed
+            const segmentEnd = capJobVisualEnd(job, job.arrival + job.computationTime, allJobs)
+            if (segmentEnd <= segmentStart) return null
+
+            const visualRemaining = segmentEnd - segmentStart
+            const left = segmentStart * pixelsPerUnit
+            const width = Math.max(visualRemaining * pixelsPerUnit, 2)
+            const top = taskIndex * ROW_HEIGHT + 6
+            const missed = missedJobIds.has(job.id)
+            const highlighted = resolvedHover?.jobIds.has(job.id) ?? false
+            const showJobIndex = width >= 14
+
+            return (
+              <Tooltip key={`planned-${job.id}`}>
+                <TooltipTrigger
+                  className={cn(
+                    'absolute flex items-center justify-center rounded-sm border border-dashed p-0 transition-shadow',
+                    missed
+                      ? 'border-destructive/30 bg-muted/50 opacity-75'
+                      : 'border-muted-foreground/25 bg-muted/35 opacity-60',
+                    highlighted && 'z-[2] opacity-90 ring-2 ring-primary',
+                  )}
+                  style={{
+                    left,
+                    top,
+                    width,
+                    height: ROW_HEIGHT - 12,
+                  }}
+                  {...{ [TIMELINE_HOVER_ZONE_ATTR]: '' }}
+                  onMouseEnter={() => onHoverChange?.({ source: 'job', jobId: job.id })}
+                  onMouseLeave={(e) => handleTimelineHoverLeave(e, onHoverChange)}
+                >
+                  {showJobIndex && (
+                    <span className="pointer-events-none select-none text-[11px] font-bold leading-none text-muted-foreground">
+                      #{job.jobIndex}
+                    </span>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">
+                    {job.taskId} job#{job.jobIndex} · {visualRemaining}u CPU não executadas
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {executed}u executadas de {job.computationTime}u planejadas
+                  </p>
+                  {missed && (
+                    <p className="flex items-center gap-1 text-destructive">
+                      <AlertTriangle className="h-3 w-3" />
+                      Deadline perdido
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+
+          {queueWaitSegments.map((segment) => {
+            const taskColor = getTaskColor(segment.taskIndex)
+            const width = Math.max((segment.end - segment.start) * pixelsPerUnit, 2)
+            const left = segment.start * pixelsPerUnit
+            const top = segment.taskIndex * ROW_HEIGHT + 6
+            const highlighted = resolvedHover?.jobIds.has(segment.jobId) ?? false
+            const showJobIndex = width >= 14
+            const missed = missedJobIds.has(segment.jobId)
+
+            return (
+              <Tooltip key={`wait-${segment.jobId}-${segment.start}`}>
+                <TooltipTrigger
+                  className={cn(
+                    'absolute flex items-center justify-center rounded-sm border border-dashed bg-transparent p-0 transition-shadow',
+                    highlighted && 'z-[3] ring-2 ring-primary',
+                  )}
+                  style={{
+                    left,
+                    top,
+                    width,
+                    height: ROW_HEIGHT - 12,
+                    borderColor: taskColor,
+                    opacity: highlighted ? 1 : 0.9,
+                  }}
+                  {...{ [TIMELINE_HOVER_ZONE_ATTR]: '' }}
+                  onMouseEnter={() => onHoverChange?.({ source: 'job', jobId: segment.jobId })}
+                  onMouseLeave={(e) => handleTimelineHoverLeave(e, onHoverChange)}
+                >
+                  {showJobIndex && (
+                    <span
+                      className="pointer-events-none select-none text-[11px] font-bold leading-none"
+                      style={{ color: taskColor }}
+                    >
+                      #{segment.jobIndex}
+                    </span>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">
+                    {segment.taskId} job#{segment.jobIndex} · [{segment.start}, {segment.end}) ·{' '}
+                    {segment.end - segment.start}u na fila
+                  </p>
+                  {missed && (
+                    <p className="flex items-center gap-1 text-destructive">
+                      <AlertTriangle className="h-3 w-3" />
+                      Deadline perdido
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
             )
           })}
 
@@ -377,6 +560,17 @@ export function GanttChart({
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="inline-block h-0 w-0 border-x-[4px] border-t-[6px] border-x-transparent border-t-foreground/60" />
           <span>chegada na fila</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span
+            className="inline-block h-3 w-6 rounded-sm border border-dashed bg-transparent"
+            style={{ borderColor: getTaskColor(0) }}
+          />
+          <span>espera na fila</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="inline-block h-3 w-6 rounded-sm border border-dashed border-muted-foreground/35 bg-muted/40" />
+          <span>CPU não executada</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <svg

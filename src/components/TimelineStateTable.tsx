@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { AlertTriangle, Check } from 'lucide-react'
 import { useMemo } from 'react'
 import {
   Table,
@@ -180,7 +180,11 @@ function CompletedJobBadge({
             }
             onMouseLeave={(e) => handleTimelineHoverLeave(e, onHoverChange)}
           >
-            <Check className="size-2.5 shrink-0" aria-hidden />
+            {job.incompleteAtSimulationEnd ? (
+              <AlertTriangle className="size-2.5 shrink-0 text-destructive" aria-hidden />
+            ) : (
+              <Check className="size-2.5 shrink-0" aria-hidden />
+            )}
             <span>
               <span className="font-bold">{job.taskId}</span>#{job.jobIndex}
             </span>
@@ -190,7 +194,8 @@ function CompletedJobBadge({
       />
       <TooltipContent side="top" className="max-w-[12rem] flex-col items-start gap-1 p-2">
         <p className="font-semibold">
-          {job.taskId}#{job.jobIndex} concluída
+          {job.taskId}#{job.jobIndex}{' '}
+          {job.incompleteAtSimulationEnd ? 'incompleta' : 'concluída'}
         </p>
         <p className="font-mono text-[10px] text-background/70">
           término t={job.finish} · TAT {job.tat}u · WT {job.wt}u
