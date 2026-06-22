@@ -51,6 +51,7 @@ function App() {
             onSimulate={handleSimulate}
             resolvedHover={resolvedHover}
             onHoverChange={setTimelineHover}
+            result={result}
           />
         </aside>
 

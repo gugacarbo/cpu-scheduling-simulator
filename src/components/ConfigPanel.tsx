@@ -3,6 +3,7 @@ import {
   ChevronDown,
   Clock,
   Cpu,
+  Download,
   FileJson,
   Gauge,
   Layers,
@@ -54,7 +55,7 @@ import {
   TIMELINE_HOVER_ZONE_ATTR,
   type TimelineHoverState,
 } from '@/lib/timeline-hover'
-import type { SchedulerName, SimulationConfig, TaskConfig } from '@/lib/types'
+import type { SchedulerName, SimulationConfig, SimulationResult, TaskConfig } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { SCHEDULER_OPTIONS } from '@/schedulers'
 
@@ -92,6 +93,7 @@ interface ConfigPanelProps {
   onSimulate: (config: SimulationConfig) => void
   resolvedHover?: ResolvedTimelineHighlight | null
   onHoverChange?: (hover: TimelineHoverState) => void
+  result?: SimulationResult | null
 }
 
 function JsonValidationAlert({ errors }: { errors: string[] }) {
@@ -183,6 +185,7 @@ export function ConfigPanel({
   onSimulate,
   resolvedHover,
   onHoverChange,
+  result,
 }: ConfigPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const skipAutoSimulateRef = useRef(false)
@@ -208,6 +211,23 @@ export function ConfigPanel({
 
   const effectiveScheduler =
     schedulerOverride ?? (validation?.success ? validation.data.scheduler_name : 'EDF')
+
+  const handleExportJson = useCallback(() => {
+    if (!result || !validation?.success) return
+    const config: SimulationConfig = {
+      ...validation.data,
+      scheduler_name: effectiveScheduler,
+    }
+    const data = { config, result }
+    const json = JSON.stringify(data, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `simulation-${config.scheduler_name.toLowerCase()}-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [result, validation, effectiveScheduler])
 
   const selectedSchedulerLabel =
     SCHEDULER_OPTIONS.find((option) => option.value === effectiveScheduler)?.label ??
@@ -346,6 +366,11 @@ export function ConfigPanel({
               <FileJson className="mr-1.5 h-3.5 w-3.5 shrink-0" />
               {hasTasks ? 'Editar Tasks' : 'Adicionar Tasks'}
             </Button>
+            {result && (
+              <Button variant="outline" size="sm" className="px-2!" onClick={handleExportJson} aria-label="Exportar JSON">
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
